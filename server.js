@@ -5,30 +5,46 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DATA_FILE = path.join(__dirname, 'database.json');
+
+// Use /tmp for database file (Render free tier requirement)
+const DATA_FILE = path.join('/tmp', 'database.json');
 
 app.use(cors());
 app.use(express.json());
 
-// Initialize database file if it doesn't exist
+// Initialize database file
 function initDB() {
-  if (!fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, JSON.stringify({ submissions: [] }, null, 2));
+  try {
+    if (!fs.existsSync(DATA_FILE)) {
+      fs.writeFileSync(DATA_FILE, JSON.stringify({ submissions: [] }, null, 2));
+    }
+  } catch (e) {
+    console.error('DB init error:', e.message);
   }
 }
 
 function readDB() {
-  initDB();
-  return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8'));
+  try {
+    initDB();
+    const data = fs.readFileSync(DATA_FILE, 'utf8');
+    return JSON.parse(data);
+  } catch (e) {
+    console.error('DB read error:', e.message);
+    return { submissions: [] };
+  }
 }
 
 function writeDB(data) {
-  fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+  try {
+    fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+  } catch (e) {
+    console.error('DB write error:', e.message);
+  }
 }
 
 // Health check
 app.get('/', (req, res) => {
-  res.json({ status: 'ok', message: 'Cornerstone RE5 Exam API' });
+  res.json({ status: 'ok', message: 'Cornerstone RE5 Exam API', timestamp: new Date().toISOString() });
 });
 
 // Get all submissions
@@ -44,7 +60,7 @@ app.post('/api/submissions', (req, res) => {
     ...req.body,
     created_at: new Date().toISOString(),
   };
-  db.submissions.push(submission);
+  db.submissions.unshift(submission);
   writeDB(db);
   res.json({ success: true, id: submission.id });
 });
@@ -65,6 +81,14 @@ app.delete('/api/submissions/learner/:idNumber', (req, res) => {
   res.json({ success: true });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Error handling
+app.use((err, req, res, next) => {
+  console.error('Server error:', err);
+  res.status(500).json({ error: 'Internal server error' });
 });
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Database file: ${DATA_FILE}`);
+  initDB();
+}); 
