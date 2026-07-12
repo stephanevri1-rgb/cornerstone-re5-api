@@ -1,10 +1,8 @@
 {
   "name": "cornerstone-re5-api",
-  "version": "1.0.0",
-  "description": "Cornerstone RE5 Exam API",
+  "version": "2.0.0",
+  "description": "Cornerstone RE5 API with MongoDB",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js"
-  },
-  "dependencies": {}
+  "scripts": { "start": "node server.js" },
+  "dependencies": { "mongoose": "^8.0.0", "dotenv": "^16.3.0" }
 }
